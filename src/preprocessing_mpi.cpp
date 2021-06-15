@@ -28,7 +28,7 @@ void PreprocessingMpi::read(int argc, char **argv)
 	Preprocessing::read(argc, argv, node->rank);
 
 	int mpi_section = parser.addSection("MPI options");
-	max_mpi_nodes =textToInteger(parser.getOption("--max_mpi_nodes", "Limit the number of effective MPI nodes to protect from too heavy disk I/O (thus ignoring larger values from mpirun)", "8"));
+	max_mpi_nodes =textToInteger(parser.getOption("--max_mpi_nodes", "Limit the number of effective MPI nodes to protect from too heavy disk I/O (thus ignoring larger values from mpirun)", "16"));
 
 	// Don't put any output to screen for mpi followers
 	verb = (node->isLeader()) ? 1 : 0;
@@ -104,7 +104,7 @@ void PreprocessingMpi::runExtractParticles()
 	}
 
 	// Wait until all nodes have finished to make final star file
-	MPI_Barrier(MPI_COMM_WORLD);
+	Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
 	if (node->isLeader())
 	{
