@@ -46,6 +46,25 @@
 #include "src/mpi.h"
 //#define MPI_DEBUG
 
+
+int Lazy_MPI_Barrier(MPI_Comm comm)
+{
+	MPI_Request request;
+	MPI_Status status;
+	int flag=0;
+	
+	
+	MPI_Ibarrier(comm, &request);
+	MPI_Test(&request,&flag,&status);
+	while(!flag)
+	{
+		usleep(10000);
+		MPI_Test(&request,&flag,&status);
+	} 
+	
+	return MPI_SUCCESS;
+}
+
 //------------ MPI ---------------------------
 MpiNode::MpiNode(int &argc, char ** argv)
 {

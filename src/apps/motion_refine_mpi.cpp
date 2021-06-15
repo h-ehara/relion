@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 		prm.read(argc, argv);
 		prm.init();
 
-		MPI_Barrier(MPI_COMM_WORLD);
+		Lazy_MPI_Barrier(MPI_COMM_WORLD);
 		prm.run();
 	}
 
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 		MPI_Abort(MPI_COMM_WORLD, RELION_EXIT_FAILURE);
 	}
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        Lazy_MPI_Barrier(MPI_COMM_WORLD);
 	return RELION_EXIT_SUCCESS;
 }
 
