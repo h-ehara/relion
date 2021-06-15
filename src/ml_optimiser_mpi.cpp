@@ -659,14 +659,14 @@ void MlOptimiserMpi::initialiseWorkLoad()
 						// The leader removes the lock if it existed
 						need_to_copy = mydata.prepareScratchDirectory(fn_scratch, fn_lock);
 					}
-					MPI_Barrier(MPI_COMM_WORLD);
+					Lazy_MPI_Barrier(MPI_COMM_WORLD);
 				}
 
 				int myverb = (node->rank == 1) ? ori_verb : 0; // Only the first follower
 				if (need_to_copy)
 					mydata.copyParticlesToScratch(myverb, true, also_do_ctfimage, keep_free_scratch_Gb);
 
-				MPI_Barrier(MPI_COMM_WORLD);
+				Lazy_MPI_Barrier(MPI_COMM_WORLD);
 				if (!need_to_copy) // This initialises nr_parts_on_scratch on non-first ranks by pretending --reuse_scratch
 					mydata.setScratchDirectory(fn_scratch, true, verb);
 			}
@@ -686,7 +686,7 @@ void MlOptimiserMpi::initialiseWorkLoad()
 		}
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
 	if(!do_split_random_halves)
 	{

@@ -57,7 +57,7 @@ void CtfRefinerMpi::run()
     	processSubsetMicrographs(my_first_micrograph, my_last_micrograph);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
     if (node->isLeader())
     {

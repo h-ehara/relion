@@ -69,7 +69,7 @@ void MotionRefinerMpi::run()
         motionEstimator.process(motionMdts, my_first_micrograph, my_last_micrograph);
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
     if (recombineFrames)
     {
@@ -92,7 +92,7 @@ void MotionRefinerMpi::run()
         frameRecombiner.process(recombMdts, my_first_micrograph, my_last_micrograph);
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
     if (generateStar && node->isLeader())
 	{
