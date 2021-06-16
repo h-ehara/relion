@@ -1102,18 +1102,26 @@ bool MetaDataTable::readStarList(std::ifstream& in)
 	return also_has_loop;
 }
 
-long int MetaDataTable::readStar(std::ifstream& in, const std::string &name, bool do_only_count)
+long int MetaDataTable::readStar(std::ifstream& in, const std::string &name, bool do_only_count, long int dontrewind)
 {
 	std::string line, token, value;
-	clear();
 	bool also_has_loop;
 
-	// Start reading the ifstream at the top
-	in.seekg(0);
-
-	// Set the version to 30000 by default, in case there is no version tag
-	// (version tags were introduced in version 31000)
-	version = 30000;
+	if(dontrewind==0)
+	{
+		clear();
+		// Start reading the ifstream at the top
+		in.seekg(0);
+		// Set the version to 30000 by default, in case there is no version tag
+		// (version tags were introduced in version 31000)
+		version = 30000;
+	}
+	else
+	{
+		int prevversion=version;//do I need this?
+		clear();
+		version=prevversion;
+	}
 
 	// Proceed until the next data_ or _loop statement
 	// The loop statement may be necessary for data blocks that have a list AND a table inside them

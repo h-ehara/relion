@@ -289,7 +289,7 @@ public:
 	 *
 	 * If no data block is found the function will return 0 and the MetaDataTable remains empty
 	 */
-	long int readStar(std::ifstream& in, const std::string &name = "", bool do_only_count = false);
+	long int readStar(std::ifstream& in, const std::string &name = "", bool do_only_count = false, long int dontrewind = 0);
 
 	// Read a MetaDataTable (get file format from extension)
 	long int read(const FileName &filename, const std::string &name = "", bool do_only_count = false);

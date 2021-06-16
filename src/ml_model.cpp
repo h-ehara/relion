@@ -294,6 +294,7 @@ void MlModel::read(FileName fn_in)
 		}
 	}
 
+	std::cerr << "INFO:Norewind_patch, ml_model, MDsigma, nr_groups=" << nr_groups << std::endl;
 	// Read sigma models for each group
 	for (int igroup = 0; igroup < nr_groups; igroup++)
 	{
@@ -302,7 +303,7 @@ void MlModel::read(FileName fn_in)
 
 		if (nr_particles_per_group[igroup] > 0)
 		{
-			MDsigma.readStar(in, "model_group_" + integerToString(igroup + 1));
+			MDsigma.readStar(in, "model_group_" + integerToString(igroup + 1), false, igroup);
 			int idx;
 			FOR_ALL_OBJECTS_IN_METADATA_TABLE(MDsigma)
 			{
