@@ -8574,7 +8574,7 @@ void MlOptimiser::calculateExpectedAngularErrors(long int my_first_part_id, long
 
 			} // end for img_id
 
-			progress_bar(n_trials*iclass + metadata_offset);
+			if(metadata_offset%8==0)progress_bar(n_trials*iclass + metadata_offset);
 		} // end for part_id
 
 		mymodel.acc_rot[iclass]   = acc_rot_class / (RFLOAT)n_trials;
