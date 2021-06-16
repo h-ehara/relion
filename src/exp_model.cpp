@@ -839,7 +839,13 @@ void Experiment::read(FileName fn_exp, bool do_ignore_particle_name, bool do_ign
 		//std::cerr << "Press any key to continue..." << std::endl;
 		//std::cin >> c;
 #endif
-
+		
+		if (MDimg.containsLabel(EMDL_IMAGE_NAME))
+		{
+			std::cerr << "INFO: Sorting particles by EMDL_IMAGE_NAME" << std::endl;
+			MDimg.newSort(EMDL_IMAGE_NAME, false,true,true);
+		}
+		
 		// Sort input particles on micrographname
 		bool is_mic_a_movie=false, star_contains_micname;
 		star_contains_micname = MDimg.containsLabel(EMDL_MICROGRAPH_NAME);
