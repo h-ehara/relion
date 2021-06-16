@@ -433,6 +433,37 @@ struct MdStringComparator
 	long index;
 };
 
+struct MdStringAtComparator
+{
+	MdStringAtComparator(long index) : index(index) {}
+
+	bool operator()(MetaDataContainer *lh, MetaDataContainer *rh) const
+	{
+		std::string slh = lh->strings[index];
+		std::string srh = rh->strings[index];
+		slh = slh.substr(slh.find("@")+1);
+		srh = srh.substr(srh.find("@")+1);
+		if(slh==srh)
+		{
+			std::string slh = lh->strings[index];
+			std::string srh = rh->strings[index];
+			slh = slh.substr(0, slh.find("@"));
+			srh = srh.substr(0, srh.find("@"));
+			std::stringstream stslh, stsrh;
+			stslh << slh;
+			stsrh << srh;
+			long ilh, irh;
+			stslh >> ilh;
+			stsrh >> irh;
+
+			return ilh < irh;
+		}
+		return slh < srh;
+	}
+
+	long index;
+};
+
 struct MdStringAfterAtComparator
 {
 	MdStringAfterAtComparator(long index) : index(index) {}
@@ -541,7 +572,12 @@ void MetaDataTable::newSort(const EMDLabel label, bool do_reverse, bool do_sort_
 {
 	if (EMDL::isString(label))
 	{
-		if (do_sort_after_at)
+		if (do_sort_after_at && do_sort_before_at)
+		{
+			std::stable_sort(objects.begin(), objects.end(),
+							 MdStringAtComparator(label2offset[label]));
+		}
+		else if (do_sort_after_at)
 		{
 			std::stable_sort(objects.begin(), objects.end(),
 							 MdStringAfterAtComparator(label2offset[label]));
