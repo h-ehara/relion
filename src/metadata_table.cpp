@@ -1761,6 +1761,7 @@ MetaDataTable MetaDataTable::combineMetaDataTables(std::vector<MetaDataTable> &M
 				if (!commonLabels.containsLabel(thisLabel, unknownLabel))
 				{
 					MDin[i].deactivateLabel(thisLabel, unknownLabel);
+					j=0;
 					std::cerr << " + WARNING: ignoring label " << (unknownLabel == "" ? EMDL::label2Str(thisLabel) : unknownLabel) << " in " << i+1 << "th STAR file because it is not present in all STAR files to be combined." << std::endl;
 				}
 			}
