@@ -2341,7 +2341,7 @@ void MlOptimiserMpi::maximization()
 #ifdef DEBUG
 	std::cerr << "rank= "<<node->rank<<" has reached barrier of reconstruction" << std::endl;
 #endif
-	MPI_Barrier(MPI_COMM_WORLD);
+	Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
 #ifdef DEBUG
 	std::cerr << "All classes have been reconstructed" << std::endl;
