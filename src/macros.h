@@ -45,10 +45,10 @@
 #ifndef MACROS_H
 #define MACROS_H
 
-#ifdef __GNUC__
-#define RELION_SHORT_VERSION "3.1-fp16-dev-ehara-gcc"
-#elif __INTEL_COMPILER
+#ifdef __INTEL_COMPILER
 #define RELION_SHORT_VERSION "3.1-fp16-dev-ehara-icc"
+#elif __GNUC__
+#define RELION_SHORT_VERSION "3.1-fp16-dev-ehara-gcc"
 #else
 #define RELION_SHORT_VERSION "3.1-fp16-dev-ehara-unknown"
 #endif
