@@ -532,7 +532,7 @@ void CtffindRunner::joinCtffindResults()
 void CtffindRunner::executeGctf(long int imic, std::vector<std::string> &allmicnames, bool is_last, int rank)
 {
 	// Always add the new micrograph to the TODO list
-	Image<double> Itmp;
+	Image<float> Itmp;
 	FileName outputfile = getOutputFileWithNewUniqueDate(fn_micrographs_ctf[imic], fn_out);
 	Itmp.read(outputfile, false); // false means only read header!
 	if (XSIZE(Itmp()) != xdim || YSIZE(Itmp()) != ydim)
@@ -540,6 +540,13 @@ void CtffindRunner::executeGctf(long int imic, std::vector<std::string> &allmicn
 	if (ZSIZE(Itmp()) > 1 || NSIZE(Itmp()) > 1)
 		REPORT_ERROR("CtffindRunner::executeGctf ERROR: No movies or volumes allowed for " + fn_micrographs_ctf[imic]);
 
+	if(Itmp.dataType() == Float16)
+	{//a quick-patch to support fp16
+		Itmp.read(outputfile);
+		remove(outputfile.c_str());
+		Itmp.write(outputfile);
+	}
+	
 	allmicnames.push_back(outputfile);
 
 	// Execute Gctf every 20 images, and always for the last one
@@ -600,6 +607,10 @@ void CtffindRunner::executeGctf(long int imic, std::vector<std::string> &allmicn
 		//std::cerr << " command= " << command << std::endl;
 		int res = system(command.c_str());
 
+		//remove temporary files (or symlinks)
+		for (size_t i = 0; i<allmicnames.size(); i++)
+			remove(allmicnames[i].c_str());
+		
 		// Re-set the allmicnames vector
 		allmicnames.clear();
 	}
