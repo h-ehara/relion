@@ -79,7 +79,8 @@ void CtffindRunner::read(int argc, char **argv, int rank)
 	do_validation = parser.checkOption("--do_validation", "Use validation inside Gctf to analyse quality of the fit?");
 	additional_gctf_options = parser.getOption("--extra_gctf_options", "Additional options for Gctf", "");
 	gpu_ids = parser.getOption("--gpu", "Device ids for each MPI-thread, e.g 0:1:2:3","");
-
+	fn_scratch = parser.getOption("--scratch_dir", "for gp16 gctf, *patch_ehara*.", "");
+	
 	// Initialise verb for non-parallel execution
 	verb = 1;
 
@@ -544,7 +545,39 @@ void CtffindRunner::executeGctf(long int imic, std::vector<std::string> &allmicn
 	{//a quick-patch to support fp16
 		Itmp.read(outputfile);
 		remove(outputfile.c_str());
-		Itmp.write(outputfile);
+		
+		if(fn_scratch != "")
+		{
+			if (fn_scratch[fn_scratch.length()-1] != '/')
+				fn_scratch += '/';
+			FileName _fn_scratch = fn_scratch + "relion_volatile/";
+			std::string command;
+			command = "install -d -m 0777 " + _fn_scratch;
+			if (system(command.c_str()))
+				REPORT_ERROR("ERROR: cannot execute: " + command);
+			
+			FileName scratchfile = getOutputFileWithNewUniqueDate(fn_micrographs_ctf[imic], _fn_scratch);
+			
+			std::string  scratchfiledir=scratchfile.c_str();
+			for (int p = scratchfiledir.size() - 1; p >= 0; p--)
+			{
+				if(scratchfiledir[p]== '/')
+				{
+					scratchfiledir[p+1]=0;break;
+				}
+			}
+			mktree(scratchfiledir,0777);
+			//std::cout << scratchfiledir << std::endl;
+			
+			Itmp.write(scratchfile);
+			int slk = symlink(scratchfile.c_str(), outputfile.c_str());
+			if(slk!=0)
+				REPORT_ERROR("fp16, error creating a symlink" + scratchfile);
+		}
+		else
+		{
+			Itmp.write(outputfile);
+		}
 	}
 	
 	allmicnames.push_back(outputfile);
@@ -608,6 +641,16 @@ void CtffindRunner::executeGctf(long int imic, std::vector<std::string> &allmicn
 		int res = system(command.c_str());
 
 		//remove temporary files (or symlinks)
+		if(fn_scratch != "")
+		{
+			char src[1024];
+			for (size_t i = 0; i<allmicnames.size(); i++)
+			{// a bit dangerous to remove the symlink destination?
+				if(readlink(allmicnames[i].c_str(),src,sizeof(src))<0)continue;
+				remove(src);
+			}
+		}
+		
 		for (size_t i = 0; i<allmicnames.size(); i++)
 			remove(allmicnames[i].c_str());
 		

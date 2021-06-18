@@ -43,7 +43,7 @@ public:
 	int verb;
 
 	// Output rootname
-	FileName fn_in, fn_out;
+	FileName fn_in, fn_out, fn_scratch;
 
 	// Estimate CTFs from rlnMicrographNameWithoutDoseWeighting instead of rlnMicrographName?
 	bool do_use_without_doseweighting;
