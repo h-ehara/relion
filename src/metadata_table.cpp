@@ -1424,24 +1424,24 @@ void MetaDataTable::histogram(std::vector<RFLOAT> &values, std::vector<RFLOAT> &
 	{
 		if (nr_bin <= 0)
 		{
-			hist_min = values[0];
-			hist_max = values[n_row - 1];
+			hist_min = values[0 + 0.00*n_row];
+			hist_max = values[n_row - 1 - 0.001*n_row];//PATCH, use 99.9% percentile.
 			bin_width = 2 * iqr / std::pow(n_row, 1.0 / 3); // Freedman-Diaconis rule
 			bin_size = (unsigned int)(std::ceil((hist_max - hist_min) / bin_width));
 			if (bin_size > 5000) bin_size = 5000; // FIXME: Ad hoc upper limit to avoid using too much memory
 		}
 		else
 		{
-			if (!std::isfinite(hist_min) || hist_min == -LARGE_NUMBER) hist_min = values[0];
-			if (!std::isfinite(hist_max) || hist_max == LARGE_NUMBER) hist_max = values[n_row - 1];
+			if (!std::isfinite(hist_min) || hist_min == -LARGE_NUMBER) hist_min = values[0 + 0.00*n_row];
+			if (!std::isfinite(hist_max) || hist_max == LARGE_NUMBER) hist_max = values[n_row - 1 - 0.001*n_row];
 			bin_size = nr_bin;
 		}
 		bin_width = (hist_max - hist_min) / bin_size;
 	}
 	else
 	{
-		if (!std::isfinite(hist_min) || hist_min == -LARGE_NUMBER) hist_min = values[0];
-		if (!std::isfinite(hist_max) || hist_max == LARGE_NUMBER) hist_max = values[n_row - 1];
+		if (!std::isfinite(hist_min) || hist_min == -LARGE_NUMBER) hist_min = values[0 + 0.00*n_row];
+		if (!std::isfinite(hist_max) || hist_max == LARGE_NUMBER) hist_max = values[n_row - 1 - 0.001*n_row];
 	}
 
 	bin_size += 2; // for -inf and +inf
