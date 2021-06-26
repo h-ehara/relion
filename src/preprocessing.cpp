@@ -18,6 +18,7 @@
  * author citations must be preserved.
  ***************************************************************************/
 #include "src/preprocessing.h"
+#include "src/prefetch.h"
 
 //#define PREP_TIMING
 #ifdef PREP_TIMING
@@ -274,12 +275,21 @@ void Preprocessing::run()
 #endif
 }
 
+
+
 void Preprocessing::joinAllStarFiles()
 {
 	FileName fn_ostar;
 	int og;
 	std::cout << " Joining metadata of all particles from " << MDmics.numberOfObjects() << " micrographs in one STAR file..." << std::endl;
 
+	{//doesnt work with multiple directories
+		FileName fn_mic;
+		MDmics.getValue(EMDL_MICROGRAPH_NAME, fn_mic, 0);
+		FileName fn1 = getOutputFileNameRoot(fn_mic).beforeLastOf("/")+"/*_extract.star";
+		start_PrefetchSmallFiles(fn1.c_str());
+	}
+	
 	long int imic = 0, ibatch = 0;
 	MetaDataTable MDout, MDmicnames, MDbatch;
 	for (long int current_object1 = MDmics.firstObject();
