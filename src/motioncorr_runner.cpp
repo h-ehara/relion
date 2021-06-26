@@ -29,6 +29,7 @@
 #include "src/jaz/img_proc/image_op.h"
 #include "src/funcs.h"
 #include "src/renderEER.h"
+#include "src/prefetch.h"
 
 //#define TIMING
 #ifdef TIMING
@@ -815,14 +816,19 @@ void MotioncorrRunner::generateLogFilePDFAndWriteStarFiles()
 	long int barstep = XMIPP_MAX(1, fn_ori_micrographs.size() / 60);
 	if (verb > 0)
 	{
-		std::cout << " Generating logfile.pdf ... " << std::endl;
+		std::cout << " Generating .star and logfile.pdf ... " << std::endl;
 		init_progress_bar(fn_ori_micrographs.size());
 	}
 
 	// Also write out the output star files
 	MDavg.clear();
 	MDmov.clear();
-
+	
+	{//doesnt work with multiple directories
+		FileName fn_avg = getOutputFileNames(fn_ori_micrographs[0]);
+		FileName fn1 = fn_avg.beforeLastOf("/")+"/*.star";
+		start_PrefetchSmallFiles(fn1.c_str());
+	}
 	for (long int imic = 0; imic < fn_ori_micrographs.size(); imic++)
 	{
 		// For output STAR file

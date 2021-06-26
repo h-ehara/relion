@@ -343,6 +343,8 @@ void MotionRefiner::run()
 		return;
 		// @TODO: apply the optimized parameters, then continue with motion estimation
 	}
+	REPORT_ERROR("Terminating: Are you really sure you want to do non-training polishing on 1 node?");
+	return;
 	
 	// The subsets will be used in openMPI parallelisation: instead of over g0->gc,
 	// they will be over smaller subsets
