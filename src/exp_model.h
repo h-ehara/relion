@@ -386,7 +386,7 @@ public:
 	// Copy particles from their original position to a scratch directory
 	// Monitor when the scratch disk gets to have fewer than free_scratch_Gb space,
 	// in that case, stop copying, and keep reading particles from where they were...
-	void copyParticlesToScratch(int verb, bool do_copy = true, bool also_do_ctf_image = false, RFLOAT free_scratch_Gb = 10);
+	void copyParticlesToScratch(int verb, bool do_copy = true, bool also_do_ctf_image = false, RFLOAT free_scratch_Gb = 10, bool write_float16 = false);
 
 	// Read from file
 	void read(

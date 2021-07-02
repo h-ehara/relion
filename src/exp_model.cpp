@@ -587,7 +587,7 @@ void Experiment::deleteDataOnScratch()
 	}
 }
 
-void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf_image, RFLOAT keep_free_scratch_Gb)
+void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf_image, RFLOAT keep_free_scratch_Gb, bool write_float16)
 {
 	// This function relies on prepareScratchDirectory() being called before!
 
@@ -812,9 +812,9 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 
 						fn_new.compose(nr_parts_on_scratch[optics_group]+1, fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particles.mrcs");
 						if (nr_parts_on_scratch[optics_group] == 0)
-							img.write(fn_new, -1, false, WRITE_OVERWRITE);
+							img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
 						else
-							img.write(fn_new, -1, true, WRITE_APPEND);
+							img.write(fn_new, -1, true, WRITE_APPEND, write_float16 ? Float16: Float);
 
 		#ifdef DEBUG_SCRATCH
 						std::cerr << "Cached " << fn_img << " to " << fn_new << std::endl;

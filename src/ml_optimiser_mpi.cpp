@@ -665,7 +665,7 @@ void MlOptimiserMpi::initialiseWorkLoad()
 
 				int myverb = (node->rank == 1) ? ori_verb : 0; // Only the first follower
 				if (need_to_copy)
-					mydata.copyParticlesToScratch(myverb, true, also_do_ctfimage, keep_free_scratch_Gb);
+					mydata.copyParticlesToScratch(myverb, true, also_do_ctfimage, keep_free_scratch_Gb, write_float16_scratch);
 
 				Lazy_MPI_Barrier(MPI_COMM_WORLD);
 				if (!need_to_copy) // This initialises nr_parts_on_scratch on non-first ranks by pretending --reuse_scratch
@@ -677,11 +677,11 @@ void MlOptimiserMpi::initialiseWorkLoad()
 				if (node->isLeader())
 				{
 					mydata.prepareScratchDirectory(fn_scratch);
-					mydata.copyParticlesToScratch(1, true, also_do_ctfimage, keep_free_scratch_Gb);
+					mydata.copyParticlesToScratch(1, true, also_do_ctfimage, keep_free_scratch_Gb, write_float16_scratch);
 				}
 				else
 				{
-					mydata.copyParticlesToScratch(0, false, also_do_ctfimage, keep_free_scratch_Gb);
+					mydata.copyParticlesToScratch(0, false, also_do_ctfimage, keep_free_scratch_Gb, write_float16_scratch);
 				}
 			}
 		}
