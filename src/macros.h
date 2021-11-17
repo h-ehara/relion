@@ -45,6 +45,7 @@
 #ifndef MACROS_H
 #define MACROS_H
 
+<<<<<<< HEAD
 #ifdef __INTEL_COMPILER
 #define RELION_SHORT_VERSION "3.1-fp16-dev-ehara-icc"
 #elif __GNUC__
@@ -53,6 +54,9 @@
 #define RELION_SHORT_VERSION "3.1-fp16-dev-ehara-unknown"
 #endif
 
+=======
+#define RELION_SHORT_VERSION "3.1.3"
+>>>>>>> ver3.1
 extern const char *g_RELION_VERSION;
 
 #include <math.h>
