@@ -614,18 +614,18 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 	long int total_nr_parts_on_scratch = 0;
 	long int total_nr_parts_preread = 0;
 	long int one_part_space, used_space = 0.;
-	long int nr_mic = numberOfMicrographs();;
+	long int nr_group = numberOfGroups();;
 	long int memsize=20.*1024*1024*1024;//20GB
 	long int partsize=0,totalsize,preread_max,block,oneblock=0;
 	
 	if (verb)
 	{
-		std::cerr << "FastCopy_ehara_alpha1 nr_part/nr_mic: " << nr_part << "/" << nr_mic<< std::endl;
+		std::cerr << "FastCopy_ehara_alpha1 nr_part/nr_group: " << nr_part << "/" << nr_group<< std::endl;
 		std::cerr << "You may need a lot of RAM to make this work. " << std::endl;
-		std::cerr << "No support for subtomo. " << std::endl;	
+		//std::cerr << "No support for subtomo. " << std::endl;	
 	}
 	
-#pragma omp parallel num_threads(10)
+#pragma omp parallel num_threads(9)
 	{
 		long int tid=omp_get_thread_num();
 		long int tnum=omp_get_num_threads();
@@ -634,20 +634,28 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 		
 		if(tid!=0)
 		{
-			if(do_copy && nr_part>500 && (!is_3D))
+			if(do_copy && nr_part>400)
 			{
 				if(tid==1)
 				{
-					while(total_nr_parts_on_scratch<50){usleep(100*1000);}
+					while(total_nr_parts_on_scratch<40){usleep(100*1000);}
 					partsize=used_space/total_nr_parts_on_scratch;
 					totalsize=partsize*nr_part;
 					preread_max=memsize/partsize;
 					
 					block=preread_max/2;
 					if(block>nr_part)block=nr_part;
+					if(is_3D)
+					{
+						if(block<200)block=200;
+						if(block>1000)block=1000;
+					}
+					else
+					{
+						if(block<10000)block=10000;
+						if(block>50000)block=50000;
+					}
 					
-					if(block<10000)block=10000;
-					if(block>50000)block=50000;
 					if(block>preread_max)block=preread_max;
 					
 					oneblock=block/(tnum-1);
@@ -692,21 +700,31 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 					
 					for(int i=start;i<end;i++)
 					{
-						if(i<total_nr_parts_on_scratch+100)
+						if(i<total_nr_parts_on_scratch+20)
 						{
 							std::cerr << "Caught up, Skipping, Thread " << tid << " " << start << "-" << end  << std::endl;
 							break;
 						}
-						
-						MDimg.getValue(EMDL_IMAGE_NAME, fn_img, i);
-						fn_img.decompose(imgno, fn_stack);
-						if (fn_stack != fn_open_stack)
+						if(is_3D)
 						{
-							hFile.openFile(fn_stack, WRITE_READONLY);
-							fn_open_stack = fn_stack;
+							img.read(fn_img);
+							if (also_do_ctf_image)
+							{
+								FileName fn_ctf;
+								MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf);
+								img.read(fn_ctf);
+							}
+						}else
+						{
+							MDimg.getValue(EMDL_IMAGE_NAME, fn_img, i);
+							fn_img.decompose(imgno, fn_stack);
+							if (fn_stack != fn_open_stack)
+							{
+								hFile.openFile(fn_stack, WRITE_READONLY);
+								fn_open_stack = fn_stack;
+							}
+							img.readFromOpenFile(fn_img, hFile, -1, false);
 						}
-						img.readFromOpenFile(fn_img, hFile, -1, false);
-						
 						#pragma omp atomic
 						total_nr_parts_preread++;
 					}
