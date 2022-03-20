@@ -700,18 +700,19 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 					
 					for(int i=start;i<end;i++)
 					{
-						if(i<total_nr_parts_on_scratch+20)
+						if(i<total_nr_parts_on_scratch+5+block/200)
 						{
 							std::cerr << "Caught up, Skipping, Thread " << tid << " " << start << "-" << end  << std::endl;
 							break;
 						}
 						if(is_3D)
 						{
+							MDimg.getValue(EMDL_IMAGE_NAME, fn_img, i);
 							img.read(fn_img);
 							if (also_do_ctf_image)
 							{
 								FileName fn_ctf;
-								MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf);
+								MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf, i);
 								img.read(fn_ctf);
 							}
 						}else
