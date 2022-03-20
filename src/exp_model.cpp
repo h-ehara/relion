@@ -767,7 +767,7 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 
 				long int imgno;
 				FileName fn_img, fn_ctf, fn_stack, fn_new;
-				Image<RFLOAT> img;
+				Image<RFLOAT> img,img2;
 				MDimg.getValue(EMDL_IMAGE_NAME, fn_img);
 
 				int optics_group = 0;
@@ -835,10 +835,10 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 							{
 								FileName fn_ctf;
 								MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf);
-								img.read(fn_ctf);
+								img2.read(fn_ctf);
 								fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle_ctf" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
 								//img.write(fn_new);
-								img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
+								img2.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
 							}
 						}
 					}
