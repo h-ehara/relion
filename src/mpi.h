@@ -64,6 +64,8 @@
 #define MPITAG_IDENTIFIER 8
 #define MPITAG_BCAST 9
 
+int Lazy_MPI_Barrier(MPI_Comm comm);
+
 /** Class to wrapp some MPI common calls in an work node.
 *
 */

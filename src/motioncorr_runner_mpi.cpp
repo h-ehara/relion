@@ -55,7 +55,7 @@ void MotioncorrRunnerMpi::run()
 			REPORT_ERROR("Bug: by now it should be clear whether to use MotionCor2 or Unblur...");
 
 		init_progress_bar(my_nr_micrographs);
-		barstep = XMIPP_MAX(1, my_nr_micrographs / 60);
+		barstep = XMIPP_MAX(1, my_nr_micrographs / (60+my_nr_micrographs/20));
 	}
 
 	for (long int imic = my_first_micrograph; imic <= my_last_micrograph; imic++)
@@ -89,7 +89,7 @@ void MotioncorrRunnerMpi::run()
 	if (verb > 0)
 		progress_bar(my_nr_micrographs);
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
 	// Only the leader writes the joined result file
 	if (node->isLeader())

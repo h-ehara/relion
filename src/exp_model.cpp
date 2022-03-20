@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "src/exp_model.h"
 #include <sys/statvfs.h>
+#include <omp.h>
 
 long int Experiment::numberOfParticles(int random_subset)
 {
@@ -605,148 +606,258 @@ void Experiment::deleteDataOnScratch()
 	}
 }
 
-void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf_image, RFLOAT keep_free_scratch_Gb)
+void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf_image, RFLOAT keep_free_scratch_Gb, bool write_float16)
 {
 	// This function relies on prepareScratchDirectory() being called before!
 
 	long int nr_part = MDimg.numberOfObjects();
-	int barstep;
-	if (verb > 0 && do_copy)
-	{
-		std::cout << " Copying particles to scratch directory: " << fn_scratch << std::endl;
-		init_progress_bar(nr_part);
-		barstep = XMIPP_MAX(1, nr_part / 60);
-	}
-
-	long int one_part_space, used_space = 0.;
-	long int max_space = (free_space_Gb - keep_free_scratch_Gb) * 1024 * 1024 * 1024; // in bytes
-#ifdef DEBUG_SCRATCH
-	std::cerr << " free_space_Gb = " << free_space_Gb << " GB, keep_free_scratch_Gb = " << keep_free_scratch_Gb << " GB.\n";
-	std::cerr << " Max space RELION can use = " << max_space << " bytes" << std::endl;
-#endif
-	// Loop over all particles and copy them one-by-one
-	FileName fn_open_stack = "";
-	fImageHandler hFile;
 	long int total_nr_parts_on_scratch = 0;
-	nr_parts_on_scratch.resize(numberOfOpticsGroups(), 0);
-
-	const int check_abort_frequency=100;
-
-	FileName prev_img_name = "/Unlikely$filename$?*!";
-	int prev_optics_group = -999;
-	FOR_ALL_OBJECTS_IN_METADATA_TABLE(MDimg)
+	long int total_nr_parts_preread = 0;
+	long int one_part_space, used_space = 0.;
+	long int nr_mic = numberOfMicrographs();;
+	long int memsize=20.*1024*1024*1024;//20GB
+	long int partsize=0,totalsize,preread_max,block,oneblock=0;
+	
+	if (verb)
 	{
-		// TODO: think about MPI_Abort here....
-		if (current_object % check_abort_frequency == 0 && pipeline_control_check_abort_job())
-			exit(RELION_EXIT_ABORTED);
-
-		long int imgno;
-		FileName fn_img, fn_ctf, fn_stack, fn_new;
-		Image<RFLOAT> img;
-		MDimg.getValue(EMDL_IMAGE_NAME, fn_img);
-
-		int optics_group = 0;
-		if (MDimg.getValue(EMDL_IMAGE_OPTICS_GROUP, optics_group))
-		{
-			optics_group--;
-		}
-
-		// Get the size of the first particle
-		if (nr_parts_on_scratch[optics_group] == 0)
-		{
-			Image<RFLOAT> tmp;
-			tmp.read(fn_img, false); // false means: only read the header!
-			one_part_space = ZYXSIZE(tmp())*sizeof(float); // MRC images are stored in floats!
-			bool myis3D = (ZSIZE(tmp()) > 1);
-			if (myis3D != is_3D)
-				REPORT_ERROR("BUG: inconsistent is_3D values!");
-			// add MRC header size for subtomograms, which are stored as 1 MRC file each
-			if (is_3D)
-			{
-				one_part_space += 1024;
-				also_do_ctf_image = MDimg.containsLabel(EMDL_CTF_IMAGE);
-				if (also_do_ctf_image)
-					one_part_space *= 2;
-			}
-#ifdef DEBUG_SCRATCH
-			std::cerr << "one_part_space[" << optics_group << "] = " << one_part_space << std::endl;
-#endif
-		}
-
-		bool is_duplicate = (prev_img_name == fn_img && prev_optics_group == optics_group);
-		// Read in the particle image, and write out on scratch
-		if (do_copy && !is_duplicate)
-		{
-#ifdef DEBUG_SCRATCH
-			std::cerr << "used_space = " << used_space << std::endl;
-#endif
-			// Now we have the particle in memory
-			// See how much space it occupies
-			used_space += one_part_space;
-			// If there is no more space, exit the loop over all objects to stop copying files and change filenames in MDimg
-			if (used_space > max_space)
-			{
-				char nodename[64] = "undefined";
-				gethostname(nodename,sizeof(nodename));
-				std::string myhost(nodename);
-				std::cerr << " Warning: scratch space full on " << myhost << ". Remaining " << nr_part - total_nr_parts_on_scratch << " particles will be read from where they were."<< std::endl;
-				break;
-			}
-
-			if (is_3D)
-			{
-				// For subtomograms, write individual .mrc files,possibly also CTF images
-				img.read(fn_img);
-				fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
-				img.write(fn_new);
-				if (also_do_ctf_image)
-				{
-					FileName fn_ctf;
-					MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf);
-					img.read(fn_ctf);
-					fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle_ctf" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
-					img.write(fn_new);
-				}
-			}
-			else
-			{
-				// Only open/close new stacks, so check if this is a new stack
-				fn_img.decompose(imgno, fn_stack);
-				if (fn_stack != fn_open_stack)
-				{
-					// Manual closing isn't necessary: if still open, then openFile will first close the filehandler
-					// Also closing the last one isn't necessary, as destructor will do this.
-					//if (fn_open_stack != "")
-					//	hFile.closeFile();
-					hFile.openFile(fn_stack, WRITE_READONLY);
-					fn_open_stack = fn_stack;
-				}
-				img.readFromOpenFile(fn_img, hFile, -1, false);
-
-				fn_new.compose(nr_parts_on_scratch[optics_group]+1, fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particles.mrcs");
-				if (nr_parts_on_scratch[optics_group] == 0)
-					img.write(fn_new, -1, false, WRITE_OVERWRITE);
-				else
-					img.write(fn_new, -1, true, WRITE_APPEND);
-
-#ifdef DEBUG_SCRATCH
-				std::cerr << "Cached " << fn_img << " to " << fn_new << std::endl;
-#endif
-			}
-		}
-
-		// Update the counter and progress bar
-		if (!is_duplicate)
-			nr_parts_on_scratch[optics_group]++;
-		total_nr_parts_on_scratch++;
-
-		prev_img_name = fn_img;
-		prev_optics_group = optics_group;
-
-		if (verb > 0 && total_nr_parts_on_scratch % barstep == 0)
-			progress_bar(total_nr_parts_on_scratch);
+		std::cerr << "FastCopy_ehara_alpha1 nr_part/nr_mic: " << nr_part << "/" << nr_mic<< std::endl;
+		std::cerr << "You may need a lot of RAM to make this work. " << std::endl;
+		std::cerr << "No support for subtomo. " << std::endl;	
 	}
+	
+#pragma omp parallel num_threads(10)
+	{
+		long int tid=omp_get_thread_num();
+		long int tnum=omp_get_num_threads();
+		
+		//usleep(300*1000*tid);
+		
+		if(tid!=0)
+		{
+			if(do_copy && nr_part>500 && (!is_3D))
+			{
+				if(tid==1)
+				{
+					while(total_nr_parts_on_scratch<50){usleep(100*1000);}
+					partsize=used_space/total_nr_parts_on_scratch;
+					totalsize=partsize*nr_part;
+					preread_max=memsize/partsize;
+					
+					block=preread_max/2;
+					if(block>nr_part)block=nr_part;
+					
+					if(block<10000)block=10000;
+					if(block>50000)block=50000;
+					if(block>preread_max)block=preread_max;
+					
+					oneblock=block/(tnum-1);
+					
+					std::cerr << " sizeKB="<< partsize/1024  << " pmax=" << preread_max <<" block="<< block <<" totalsizeGB(est.)= "<< totalsize/1024/1024/1024 << std::endl;
+				}else
+				{
+					while(oneblock==0){usleep(100*1000);}
+					usleep(200*1000*tid);
+				}
+				
+				std::cerr << " Prereading images: " << tid << "/" << tnum  << std::endl;
+				
+				long int imgno;
+				FileName fn_img, fn_ctf, fn_stack, fn_new;
+				Image<RFLOAT> img;
+				FileName fn_open_stack = "";
+				fImageHandler hFile;
+				
+				for(int b=0;;b++)
+				{
+					int start=b*block+(tid-1)*oneblock;
+					int end=start+oneblock;
+					if(end>nr_part)end=nr_part;
+					if(start>=nr_part)
+					{
+						std::cerr << "Finished, Thread " << tid << " " << start << "-" << end  << std::endl;
+						break;
+					}
+					int msg=0;
+					while(start>total_nr_parts_on_scratch+preread_max)
+					{
+						if(msg==0)
+						{
+							std::cerr << "Waiting, Thread " << tid << " " << start << "-" << end  << std::endl;
+							msg=1;
+						}
+						usleep(100*1000);
+					}
+					
+					std::cerr << "Starting, Thread " << tid << " " << start << "-" << end  << std::endl;
+					
+					for(int i=start;i<end;i++)
+					{
+						if(i<total_nr_parts_on_scratch+100)
+						{
+							std::cerr << "Caught up, Skipping, Thread " << tid << " " << start << "-" << end  << std::endl;
+							break;
+						}
+						
+						MDimg.getValue(EMDL_IMAGE_NAME, fn_img, i);
+						fn_img.decompose(imgno, fn_stack);
+						if (fn_stack != fn_open_stack)
+						{
+							hFile.openFile(fn_stack, WRITE_READONLY);
+							fn_open_stack = fn_stack;
+						}
+						img.readFromOpenFile(fn_img, hFile, -1, false);
+						
+						#pragma omp atomic
+						total_nr_parts_preread++;
+					}
+					
+				}
+				
+			}
+		}else
+		{
+			int barstep;
+			if (verb > 0 && do_copy)
+			{
+				std::cout << " Copying particles to scratch directory: " << fn_scratch << std::endl;
+				init_progress_bar(nr_part);
+				barstep = XMIPP_MAX(1, nr_part / 60);
+			}
 
+			
+			long int max_space = (free_space_Gb - keep_free_scratch_Gb) * 1024 * 1024 * 1024; // in bytes
+		#ifdef DEBUG_SCRATCH
+			std::cerr << " free_space_Gb = " << free_space_Gb << " GB, keep_free_scratch_Gb = " << keep_free_scratch_Gb << " GB.\n";
+			std::cerr << " Max space RELION can use = " << max_space << " bytes" << std::endl;
+		#endif
+			// Loop over all particles and copy them one-by-one
+			FileName fn_open_stack = "";
+			fImageHandler hFile;
+			
+			nr_parts_on_scratch.resize(numberOfOpticsGroups(), 0);
+
+			const int check_abort_frequency=100;
+
+			FileName prev_img_name = "/Unlikely$filename$?*!";
+			int prev_optics_group = -999;
+			FOR_ALL_OBJECTS_IN_METADATA_TABLE(MDimg)
+			{
+				// TODO: think about MPI_Abort here....
+				if (current_object % check_abort_frequency == 0 && pipeline_control_check_abort_job())
+					exit(RELION_EXIT_ABORTED);
+
+				long int imgno;
+				FileName fn_img, fn_ctf, fn_stack, fn_new;
+				Image<RFLOAT> img;
+				MDimg.getValue(EMDL_IMAGE_NAME, fn_img);
+
+				int optics_group = 0;
+				if (MDimg.getValue(EMDL_IMAGE_OPTICS_GROUP, optics_group))
+				{
+					optics_group--;
+				}
+
+				// Get the size of the first particle
+				if (nr_parts_on_scratch[optics_group] == 0)
+				{
+					Image<RFLOAT> tmp;
+					tmp.read(fn_img, false); // false means: only read the header!
+					one_part_space = ZYXSIZE(tmp())*sizeof(float); // MRC images are stored in floats!
+					bool myis3D = (ZSIZE(tmp()) > 1);
+					if (myis3D != is_3D)
+						REPORT_ERROR("BUG: inconsistent is_3D values!");
+					// add MRC header size for subtomograms, which are stored as 1 MRC file each
+					if (is_3D)
+					{
+						one_part_space += 1024;
+						also_do_ctf_image = MDimg.containsLabel(EMDL_CTF_IMAGE);
+						if (also_do_ctf_image)
+							one_part_space *= 2;
+					}
+		#ifdef DEBUG_SCRATCH
+					std::cerr << "one_part_space[" << optics_group << "] = " << one_part_space << std::endl;
+		#endif
+				}
+
+				bool is_duplicate = (prev_img_name == fn_img && prev_optics_group == optics_group);
+				// Read in the particle image, and write out on scratch
+				if (do_copy && !is_duplicate)
+				{
+		#ifdef DEBUG_SCRATCH
+					std::cerr << "used_space = " << used_space << std::endl;
+		#endif
+					// Now we have the particle in memory
+					// See how much space it occupies
+					used_space += one_part_space;
+					// If there is no more space, exit the loop over all objects to stop copying files and change filenames in MDimg
+					if (used_space > max_space)
+					{
+						char nodename[64] = "undefined";
+						gethostname(nodename,sizeof(nodename));
+						std::string myhost(nodename);
+						std::cerr << " Warning: scratch space full on " << myhost << ". Remaining " << nr_part - total_nr_parts_on_scratch << " particles will be read from where they were."<< std::endl;
+						break;
+					}
+
+					if (is_3D)
+					{
+						// For subtomograms, write individual .mrc files,possibly also CTF images
+						img.read(fn_img);
+						fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
+						img.write(fn_new);
+						if (also_do_ctf_image)
+						{
+							FileName fn_ctf;
+							MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf);
+							img.read(fn_ctf);
+							fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle_ctf" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
+							img.write(fn_new);
+						}
+					}
+					else
+					{
+						// Only open/close new stacks, so check if this is a new stack
+						fn_img.decompose(imgno, fn_stack);
+						if (fn_stack != fn_open_stack)
+						{
+							// Manual closing isn't necessary: if still open, then openFile will first close the filehandler
+							// Also closing the last one isn't necessary, as destructor will do this.
+							//if (fn_open_stack != "")
+							//	hFile.closeFile();
+							hFile.openFile(fn_stack, WRITE_READONLY);
+							fn_open_stack = fn_stack;
+						}
+						img.readFromOpenFile(fn_img, hFile, -1, false);
+
+						fn_new.compose(nr_parts_on_scratch[optics_group]+1, fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particles.mrcs");
+						if (nr_parts_on_scratch[optics_group] == 0)
+							img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
+						else
+							img.write(fn_new, -1, true, WRITE_APPEND, write_float16 ? Float16: Float);
+
+		#ifdef DEBUG_SCRATCH
+						std::cerr << "Cached " << fn_img << " to " << fn_new << std::endl;
+		#endif
+					}
+				}
+
+				// Update the counter and progress bar
+				if (!is_duplicate)
+					nr_parts_on_scratch[optics_group]++;
+				total_nr_parts_on_scratch++;
+
+				prev_img_name = fn_img;
+				prev_optics_group = optics_group;
+
+				if (verb > 0 && total_nr_parts_on_scratch % barstep == 0)
+				{
+					progress_bar(total_nr_parts_on_scratch);
+					std::cerr << "Preread/written : " << total_nr_parts_preread << " / " << total_nr_parts_on_scratch << " total: " << nr_part << std::endl;
+				}
+			}
+		}//if tid!=0
+	}//#pragma parallel
+	
 	if (verb)
 	{
 		progress_bar(nr_part);
@@ -817,11 +928,9 @@ void Experiment::read(FileName fn_exp, bool do_ignore_particle_name, bool do_ign
 		//std::cerr << "Press any key to continue..." << std::endl;
 		//std::cin >> c;
 #endif
-
 		// Sort input particles on micrograph (or tomogram) name
 		EMDLabel my_sort_column = (is_3D) ? EMDL_TOMO_NAME : EMDL_MICROGRAPH_NAME;
 		if (MDimg.containsLabel(my_sort_column))  MDimg.newSort(my_sort_column);
-
 #ifdef DEBUG_READ
 		std::cerr << "Done sorting MDimg" << std::endl;
 		std::cerr << " MDimg.numberOfObjects()= " << MDimg.numberOfObjects() << std::endl;

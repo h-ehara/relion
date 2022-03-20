@@ -64,6 +64,7 @@
 #include "src/metadata_table.h"
 #include "src/fftw.h"
 #include "src/float16.h"
+#include <immintrin.h>
 
 /// @defgroup Images Images
 //@{
@@ -703,7 +704,8 @@ public:
 			{
 				float16 *ptr = (float16 *)page;
 				for(size_t i = 0; i < pageSize; i++)
-					ptrDest[i] = (T)half2float(ptr[i]);
+					ptrDest[i] = (T)_cvtsh_ss(ptr[i]);
+					//ptrDest[i] = (T)half2float(ptr[i]);
 				break;
 			}
 		case UHalf:

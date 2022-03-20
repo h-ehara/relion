@@ -524,6 +524,28 @@ will still yield good performance and possibly a more stable execution. \n" << s
 	{
 		//Only the first_follower of each subset writes model to disc
 		MlOptimiser::write(DO_WRITE_SAMPLING, DONT_WRITE_DATA, DO_WRITE_OPTIMISER, DO_WRITE_MODEL, node->rank);
+
+
+		bool do_warn = false;
+		int warn_count = 0;
+		for (int igroup = 0; igroup< mymodel.nr_groups; igroup++)
+		{
+			if (mymodel.nr_particles_per_group[igroup] < 5 && node->rank == 1) // only warn for half1 to avoid messy output
+			{
+				//if (my_nr_subsets == 1)
+				//	std:: cout << "WARNING: There are only " << mymodel.nr_particles_per_group[igroup] << " particles in group " << igroup + 1 << std::endl;
+				//else
+				//	std:: cout << "WARNING: There are only " << mymodel.nr_particles_per_group[igroup] << " particles in group " << igroup + 1 << " of half-set " << node->rank << std::endl;
+				do_warn = true;warn_count++;
+			}
+		}
+		if (do_warn)
+		{
+			std:: cout << "WARNING: You have " << warn_count << " groups with small number of particles." << std::endl;
+			std:: cout << "WARNING: You may want to consider joining some micrographs into larger groups to obtain more robust noise estimates. " << std::endl;
+			std:: cout << "         Then, try using Select->Regroup particles. " << std::endl;
+		}
+
 	}
 
 #ifdef DEBUG
@@ -658,14 +680,14 @@ void MlOptimiserMpi::initialiseWorkLoad()
 						// The leader removes the lock if it existed
 						need_to_copy = mydata.prepareScratchDirectory(fn_scratch, fn_lock);
 					}
-					MPI_Barrier(MPI_COMM_WORLD);
+					Lazy_MPI_Barrier(MPI_COMM_WORLD);
 				}
 
 				int myverb = (node->rank == 1) ? ori_verb : 0; // Only the first follower
 				if (need_to_copy)
-					mydata.copyParticlesToScratch(myverb, true, also_do_ctfimage, keep_free_scratch_Gb);
+					mydata.copyParticlesToScratch(myverb, true, also_do_ctfimage, keep_free_scratch_Gb, write_float16_scratch);
 
-				MPI_Barrier(MPI_COMM_WORLD);
+				Lazy_MPI_Barrier(MPI_COMM_WORLD);
 				if (!need_to_copy) // This initialises nr_parts_on_scratch on non-first ranks by pretending --reuse_scratch
 				{
 					mydata.setScratchDirectory(fn_scratch, true, verb);
@@ -678,17 +700,17 @@ void MlOptimiserMpi::initialiseWorkLoad()
 				if (node->isLeader())
 				{
 					mydata.prepareScratchDirectory(fn_scratch);
-					mydata.copyParticlesToScratch(1, true, also_do_ctfimage, keep_free_scratch_Gb);
+					mydata.copyParticlesToScratch(1, true, also_do_ctfimage, keep_free_scratch_Gb, write_float16_scratch);
 				}
 				else
 				{
-					mydata.copyParticlesToScratch(0, false, also_do_ctfimage, keep_free_scratch_Gb);
+					mydata.copyParticlesToScratch(0, false, also_do_ctfimage, keep_free_scratch_Gb, write_float16_scratch);
 				}
 			}
 		}
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
 	if(!do_split_random_halves)
 	{
@@ -2275,7 +2297,7 @@ void MlOptimiserMpi::maximization()
 #ifdef DEBUG
 	std::cerr << "rank= "<<node->rank<<" has reached barrier of reconstruction" << std::endl;
 #endif
-	MPI_Barrier(MPI_COMM_WORLD);
+	Lazy_MPI_Barrier(MPI_COMM_WORLD);
 
 #ifdef DEBUG
 	std::cerr << "All classes have been reconstructed" << std::endl;

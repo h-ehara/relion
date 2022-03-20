@@ -463,7 +463,8 @@ public:
 
 	// Place on scratch disk to copy particle stacks temporarily
 	FileName fn_scratch;
-
+	bool write_float16_scratch;
+	
 	// Amount of scratch space to be left free (in Gb)
 	RFLOAT keep_free_scratch_Gb;
 

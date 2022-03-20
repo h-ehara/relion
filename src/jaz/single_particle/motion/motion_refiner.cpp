@@ -360,7 +360,13 @@ void MotionRefiner::run()
 		// @TODO: apply the optimized parameters, then continue with motion estimation
 	}
 
+	
 	const int mgc = chosenMdts.size();
+
+	
+	REPORT_ERROR("Terminating: Are you really sure you want to do non-training polishing on 1 node?");
+	return;
+	
 	
 	const int lastTotalMgForFCC = lastTotalMicrographForFCC();
 

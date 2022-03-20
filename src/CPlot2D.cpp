@@ -34,6 +34,8 @@ void joinMultipleEPSIntoSinglePDF(FileName fn_pdf, std::vector<FileName> fn_eps)
     command += fn_pdf + " @" + fn_list;
     std::ofstream filelist(fn_pdf + ".lst");
     bool have_at_least_one = false;
+	int pagenum = 0;
+	
     for (int i = 0; i < fn_eps.size(); i++)
     {
         // fn_eps[i] could be a Linux wildcard...
@@ -41,13 +43,16 @@ void joinMultipleEPSIntoSinglePDF(FileName fn_pdf, std::vector<FileName> fn_eps)
         fn_eps[i].globFiles(all_eps_files);
         for (long int j= 0; j < all_eps_files.size(); j++)
         {
+        	if(pagenum > 100) continue;
         	if (exists(all_eps_files[j]))
         	{
         		filelist << all_eps_files[j] << "\n";
+        		pagenum++;
         		have_at_least_one = true;
         	}
         }
     }
+	if(pagenum > 100) std::cerr << " Limiting .pdf to 100 pages ....." << "\n";
     filelist.close();
 
     bool have_error_in_gs = false;
