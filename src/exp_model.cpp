@@ -823,14 +823,16 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 						// For subtomograms, write individual .mrc files,possibly also CTF images
 						img.read(fn_img);
 						fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
-						img.write(fn_new);
+						//img.write(fn_new);
+						img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
 						if (also_do_ctf_image)
 						{
 							FileName fn_ctf;
 							MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf);
 							img.read(fn_ctf);
 							fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle_ctf" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
-							img.write(fn_new);
+							//img.write(fn_new);
+							img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
 						}
 					}
 					else
