@@ -624,7 +624,7 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 		std::cerr << "You may need a lot of RAM to make this work. " << std::endl;
 		//std::cerr << "No support for subtomo. " << std::endl;	
 	}
-	
+	omp_set_nested(1);
 #pragma omp parallel num_threads(9)
 	{
 		long int tid=omp_get_thread_num();
@@ -647,7 +647,7 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 					if(block>nr_part)block=nr_part;
 					if(is_3D)
 					{
-						if(block<200)block=200;
+						if(block<80)block=80;
 						if(block>1000)block=1000;
 					}
 					else
@@ -820,19 +820,26 @@ void Experiment::copyParticlesToScratch(int verb, bool do_copy, bool also_do_ctf
 
 					if (is_3D)
 					{
-						// For subtomograms, write individual .mrc files,possibly also CTF images
-						img.read(fn_img);
-						fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
-						//img.write(fn_new);
-						img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
-						if (also_do_ctf_image)
+						#pragma omp parallel num_threads(2)
 						{
-							FileName fn_ctf;
-							MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf);
-							img.read(fn_ctf);
-							fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle_ctf" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
-							//img.write(fn_new);
-							img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
+							long int tid2=omp_get_thread_num();
+							if(tid2==0)
+							{
+								// For subtomograms, write individual .mrc files,possibly also CTF images
+								img.read(fn_img);
+								fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
+								//img.write(fn_new);
+								img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
+							}
+							if (tid2==1 && also_do_ctf_image)
+							{
+								FileName fn_ctf;
+								MDimg.getValue(EMDL_CTF_IMAGE, fn_ctf);
+								img.read(fn_ctf);
+								fn_new = fn_scratch + "opticsgroup" + integerToString(optics_group+1) + "_particle_ctf" + integerToString(nr_parts_on_scratch[optics_group]+1)+".mrc";
+								//img.write(fn_new);
+								img.write(fn_new, -1, false, WRITE_OVERWRITE, write_float16 ? Float16: Float);
+							}
 						}
 					}
 					else
