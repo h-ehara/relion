@@ -17,49 +17,19 @@
  * source code. Additional authorship citations may be added, but existing
  * author citations must be preserved.
  ***************************************************************************/
-#include <src/autopicker_mpi.h>
-#ifdef _CUDA_ENABLED
-#include <src/acc/cuda/cuda_autopicker.h>
-#endif
+#include "../batchrunner_mpi.h"
 
 int main(int argc, char *argv[])
 {
-	AutoPickerMpi prm;
+	BatchRunnerMpi prm;
 
 	try
 	{
 		prm.read(argc, argv);
 
-		prm.initialise(prm.getRank());
+		prm.initialise();
 
-#ifdef _CUDA_ENABLED
-		std::stringstream didSs;
-		if (prm.do_gpu)
-		{
-			didSs << "APr" << prm.getRank();
-			prm.deviceInitialise();
-		}
-
-		if (prm.do_gpu && !(prm.do_topaz_train || prm.do_topaz_extract))
-		{
-			prm.cudaPicker = (void*) new AutoPickerCuda((AutoPickerMpi*)&prm, didSs.str().c_str());
-			((AutoPickerCuda*)prm.cudaPicker)->run();
-		}
-		else
-#endif
-		{
-			if (prm.do_topaz_train)
-			{
-				// only leader trains!
-				if (prm.getRank() == 0) prm.trainTopaz();
-				else std::cerr << " WARNNG: rank " << prm.getRank() << " is doing nothing in training as it hasn't been parallelised ..." << std::endl;
-			}
-			else prm.run();
-		}
-
-		MPI_Barrier(MPI_COMM_WORLD);
-		if (prm.getRank() == 0 && !prm.do_topaz_train)
-			prm.generatePDFLogfile();
+		prm.run();
 	}
 
 	catch (RelionError XE)
@@ -72,7 +42,10 @@ int main(int argc, char *argv[])
 		return RELION_EXIT_FAILURE;
 	}
 
-        MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);
 	return RELION_EXIT_SUCCESS;
 }
+
+
+
 

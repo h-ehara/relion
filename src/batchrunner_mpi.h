@@ -17,57 +17,46 @@
  * source code. Additional authorship citations may be added, but existing
  * author citations must be preserved.
  ***************************************************************************/
-#include <src/autopicker.h>
-#ifdef _CUDA_ENABLED
-#include <src/acc/cuda/cuda_autopicker.h>
-#endif
 
-int main(int argc, char *argv[])
+#ifndef BATCHRUNNER_MPI_H_
+#define BATCHRUNNER_MPI_H_
+
+
+#include "batchrunner.h"
+#include "src/mpi.h"
+#include "src/parallel.h"
+
+class BatchRunnerMpi: public BatchRunner
 {
-	AutoPicker prm;
+private:
+	MpiNode *node;
 
-	try
+public:
+	/** Destructor, calls MPI_Finalize */
+	~BatchRunnerMpi()
 	{
-		prm.read(argc, argv);
-
-		prm.initialise();
-
-#ifdef _CUDA_ENABLED
-		std::stringstream didSs;
-		if (prm.do_gpu)
-		{
-			didSs << "AP";
-			prm.deviceInitialise();
-		}
-
-		if (prm.do_gpu && !(prm.do_topaz_train || prm.do_topaz_extract))
-		{
-			prm.cudaPicker = (void*) new AutoPickerCuda((AutoPicker*)&prm, didSs.str().c_str());
-			((AutoPickerCuda*)prm.cudaPicker)->run();
-		}
-		else
-#endif
-		{
-			if (prm.do_topaz_train) prm.trainTopaz();
-			else prm.run();
-		}
-
-		if (!prm.do_topaz_train)
-			prm.generatePDFLogfile();
-
-#ifdef TIMING
-		std::cout << "timings:" << std::endl;
-		prm.timer.printTimes(false);
-#endif
-	}
-	catch (RelionError XE)
-	{
-		//prm.usage();
-		std::cerr << XE;
-
-		return RELION_EXIT_FAILURE;
+		delete node;
 	}
 
-	return RELION_EXIT_SUCCESS;
-}
+	// Read command line arguments
+	void read(int argc, char **argv);
 
+	// Parallelized run function
+	void run();
+
+	MpiNode * getNode()
+	{
+		return(node);
+	}
+
+	int getRank()
+	{
+		return(node->rank);
+	}
+
+};
+
+
+
+
+#endif /* BATCHRUNNER_MPI_H_ */
