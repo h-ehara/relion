@@ -590,6 +590,8 @@ public:
 
 	///////// Hidden stuff, does not work with read/write: only via command-line ////////////////
 
+	RFLOAT ehara_param1,ehara_param2,ehara_param3,ehara_param4;
+	
 	// Skip gridding in reconstruction
 	bool skip_gridding;
 

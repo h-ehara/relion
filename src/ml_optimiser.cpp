@@ -877,6 +877,12 @@ if(do_gpu)
 	allow_coarser_samplings = parser.checkOption("--allow_coarser_sampling", "In 2D/3D classification, allow coarser angular and translational samplings if accuracies are bad (typically in earlier iterations.");
 	do_trust_ref_size = parser.checkOption("--trust_ref_size", "Trust the pixel and box size of the input reference; by default the program will die if these are different from the first optics group of the data");
 	minimum_nr_particles_sigma2_noise = textToInteger(parser.getOption("--nr_parts_sigma2noise", "Number of particles (per optics group) for initial noise spectra estimation.", "1000"));
+		
+		
+	ehara_param1 = textToFloat(parser.getOption("--ehara_param1", "param1, for slowing down recentering", "1.0"));
+	ehara_param2 = textToFloat(parser.getOption("--ehara_param2", "param2", "1.0"));
+	ehara_param3 = textToFloat(parser.getOption("--ehara_param3", "param3", "1.0"));
+	ehara_param4 = textToFloat(parser.getOption("--ehara_param4", "param4", "1.0"));
 	///////////////// Special stuff for first iteration (only accessible via CL, not through readSTAR ////////////////////
 
 	// When reading from the CL: always start at iteration 1 and subset 1
@@ -4651,7 +4657,7 @@ void MlOptimiser::centerClasses()
 		// Maximum number of pixels to shift center-of-mass is the current search range of translations
 		if (my_com.module() > offset_range_pix)
 			my_com *= offset_range_pix/my_com.module();
-		my_com *= -1;
+		my_com *= -1 * ehara_param1;
 
 		// Prevent small "vibrations", which seem to cause mismatches between momenta and ref
 		if (do_grad &&
