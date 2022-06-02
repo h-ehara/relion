@@ -522,6 +522,11 @@ if(do_gpu)
 		optimisationSet.read(fn_OS);
 	}
 
+	ehara_param1 = textToFloat(parser.getOption("--ehara_param1", "param1, for slowing down recentering", "1.0"));
+	ehara_param2 = textToFloat(parser.getOption("--ehara_param2", "param2", "1.0"));
+	ehara_param3 = textToFloat(parser.getOption("--ehara_param3", "param3", "1.0"));
+	ehara_param4 = textToFloat(parser.getOption("--ehara_param4", "param4", "1.0"));
+		
 	do_print_metadata_labels = false;
 	do_print_symmetry_ops = false;
 #ifdef DEBUG
